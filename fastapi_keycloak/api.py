@@ -239,37 +239,46 @@ class FastAPIKeycloak:
             JWTClaimsError: If any claim is invalid
             HTTPException: If any role required is not contained within the roles of the users
         """
+        try:
+            def current_user(
+                    token: OAuth2PasswordBearer = Depends(self.user_auth_scheme),
+            ) -> OIDCUser:
+                """Decodes and verifies a JWT to get the current user
 
-        def current_user(
-                token: OAuth2PasswordBearer = Depends(self.user_auth_scheme),
-        ) -> OIDCUser:
-            """Decodes and verifies a JWT to get the current user
+                Args:
+                    token OAuth2PasswordBearer: Access token in `Authorization` HTTP-header
 
-            Args:
-                token OAuth2PasswordBearer: Access token in `Authorization` HTTP-header
+                Returns:
+                    OIDCUser: Decoded JWT content
 
-            Returns:
-                OIDCUser: Decoded JWT content
+                Raises:
+                    ExpiredSignatureError: If the token is expired (exp > datetime.now())
+                    JWTError: If decoding fails or the signature is invalid
+                    JWTClaimsError: If any claim is invalid
+                    HTTPException: If any role required is not contained within the roles of the users
+                """
+                decoded_token = self._decode_token(token=token, audience="account")
+                user = OIDCUser.parse_obj(decoded_token)
+                if required_roles:
+                    for role in required_roles:
+                        if role not in user.roles:
+                            raise HTTPException(
+                                status_code=status.HTTP_403_FORBIDDEN,
+                                detail=f'Role "{role}" is required to perform this action',
+                            )
 
-            Raises:
-                ExpiredSignatureError: If the token is expired (exp > datetime.now())
-                JWTError: If decoding fails or the signature is invalid
-                JWTClaimsError: If any claim is invalid
-                HTTPException: If any role required is not contained within the roles of the users
-            """
-            decoded_token = self._decode_token(token=token, audience="account")
-            user = OIDCUser.parse_obj(decoded_token)
-            if required_roles:
-                for role in required_roles:
-                    if role not in user.roles:
-                        raise HTTPException(
-                            status_code=status.HTTP_403_FORBIDDEN,
-                            detail=f'Role "{role}" is required to perform this action',
-                        )
-
-            if extra_fields:
-                for field in extra_fields:
-                    user.extra_fields[field] = decoded_token.get(field, None)
+                if extra_fields:
+                    for field in extra_fields:
+                        user.extra_fields[field] = decoded_token.get(field, None)
+        except ExpiredSignatureError as ex:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f'token is expired',)
+        except JWTClaimsError as ex:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f' any claim is invalid',)
+        except JWTError as ex:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f'decoding fails or the signature is invalid',)
+        
+        
+            
 
             return user
 
