@@ -239,24 +239,25 @@ class FastAPIKeycloak:
             JWTClaimsError: If any claim is invalid
             HTTPException: If any role required is not contained within the roles of the users
         """
-        try:
-            def current_user(
-                    token: OAuth2PasswordBearer = Depends(self.user_auth_scheme),
-            ) -> OIDCUser:
-                """Decodes and verifies a JWT to get the current user
 
-                Args:
-                    token OAuth2PasswordBearer: Access token in `Authorization` HTTP-header
+        def current_user(
+                token: OAuth2PasswordBearer = Depends(self.user_auth_scheme),
+        ) -> OIDCUser:
+            """Decodes and verifies a JWT to get the current user
 
-                Returns:
-                    OIDCUser: Decoded JWT content
+            Args:
+                token OAuth2PasswordBearer: Access token in `Authorization` HTTP-header
 
-                Raises:
-                    ExpiredSignatureError: If the token is expired (exp > datetime.now())
-                    JWTError: If decoding fails or the signature is invalid
-                    JWTClaimsError: If any claim is invalid
-                    HTTPException: If any role required is not contained within the roles of the users
-                """
+            Returns:
+                OIDCUser: Decoded JWT content
+
+            Raises:
+                ExpiredSignatureError: If the token is expired (exp > datetime.now())
+                JWTError: If decoding fails or the signature is invalid
+                JWTClaimsError: If any claim is invalid
+                HTTPException: If any role required is not contained within the roles of the users
+            """
+            try:
                 decoded_token = self._decode_token(token=token, audience="account")
                 user = OIDCUser.parse_obj(decoded_token)
                 if required_roles:
@@ -270,12 +271,13 @@ class FastAPIKeycloak:
                 if extra_fields:
                     for field in extra_fields:
                         user.extra_fields[field] = decoded_token.get(field, None)
-        except ExpiredSignatureError as ex:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f'token is expired',)
-        except JWTClaimsError as ex:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f' any claim is invalid',)
-        except JWTError as ex:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f'decoding fails or the signature is invalid',)
+        
+            except ExpiredSignatureError as ex:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f'token is expired',)
+            except JWTClaimsError as ex:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f' any claim is invalid',)
+            except JWTError as ex:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f'decoding fails or the signature is invalid',)
         
         
             
