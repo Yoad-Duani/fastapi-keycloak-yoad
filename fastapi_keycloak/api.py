@@ -278,6 +278,9 @@ class FastAPIKeycloak:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f' any claim is invalid',)
             except JWTError as ex:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f'decoding fails or the signature is invalid',)
+            except Exception as ex:
+                print("error ex")
+                # print(ex)
         
         
             
