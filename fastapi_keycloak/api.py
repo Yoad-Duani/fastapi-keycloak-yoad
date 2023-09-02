@@ -1163,9 +1163,18 @@ class FastAPIKeycloak:
                 "verify_aud": audience is not None,
                 "verify_exp": True,
             }
-        return jwt.decode(
-            token=token, key=self.public_key, options=options, audience=audience
-        )
+        try:
+            return jwt.decode(
+                token=token, key=self.public_key, options=options, audience=audience
+            )
+        except ExpiredSignatureError as ex:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f'token is expired',)
+        except JWTClaimsError as ex:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f' any claim is invalid',)
+        except JWTError as ex:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail=f'decoding fails or the signature is invalid',)
+        except Exception as ex:
+            print("error ex")
 
     def __str__(self):
         """String representation"""
